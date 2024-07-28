@@ -19,12 +19,12 @@ class Agent:
         self.epsilon = epsilon  # 무작위로 행동할 확률(탐색 확률)
         self.Qs = np.zeros(action_size)
         self.ns = np.zeros(action_size)
-    
+
     # 슬롯머신의 가치 추정
     def update(self, action, reward):
         self.ns[action] += 1
         self.Qs[action] += (reward - self.Qs[action]) / self.ns[action]
-    
+
     # 행동 선택(ε-탐욕 정책)
     def get_action(self):
         if np.random.rand() < self.epsilon:
