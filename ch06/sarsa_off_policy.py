@@ -12,7 +12,7 @@ class SarsaOffPolicyAgent:
         self.gamma = 0.9
         self.alpha = 0.8
         self.epsilon = 0.1
-        self.action_sisze = 4
+        self.action_size = 4
 
         random_actions = {0: 0.25, 1: 0.25, 2: 0.25, 3: 0.25}
         self.pi = defaultdict(lambda: random_actions)
