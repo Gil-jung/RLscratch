@@ -1,6 +1,6 @@
-import copy
-from collections import deque
-import random
+if '__file__' in globals():
+    import os, sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import matplotlib.pyplot as plt
 import numpy as np
 import gym
@@ -43,9 +43,9 @@ class DQNAgent:  # 에이전트 클래스
         if np.random.rand() < self.epsilon:
             return np.random.choice(self.action_size)
         else:
-            state = state[np.newaxis, :]  # 배치 처리용 차원 추가
-            qs = self.qnet(torch.from_numpy(state))
-            return qs.argmax()
+            state = torch.from_numpy(state[np.newaxis, :])  # 배치 처리용 차원 추가
+            qs = self.qnet(state)
+            return qs.argmax().item()
     
     def update(self, state, action, reward, next_state, done):
         # 경험 재생 버퍼에 경험 데이터 추가
@@ -55,11 +55,13 @@ class DQNAgent:  # 에이전트 클래스
         
         # 미니배치 크기 이상이 쌓이면 미니배치 생성
         state, action, reward, next_state, done = self.replay_buffer.get_batch()
-        qs = self.qnet(torch.from_numpy(state))
+        qs = self.qnet(state)
         q = qs[np.arange(self.batch_size), action]
 
-        next_qs = self.qnet_target(torch.from_numpy(next_state))
+        next_qs = self.qnet_target(next_state)
         next_q = next_qs.max(axis=1)[0]
+
+        next_q.detach()
         target = reward + (1 - done) * self.gamma * next_q
 
         loss_fn = nn.MSELoss()
@@ -70,4 +72,54 @@ class DQNAgent:  # 에이전트 클래스
         self.optimizer.step()
     
     def sync_qnet(self):  # 두 신경망 동기화
-        self.qnet_target = copy.deepcopy(self.qnet)
+        self.qnet_target.load_state_dict(self.qnet.state_dict())
+
+
+if __name__ == '__main__':
+    episodes = 300       # 에피소드 수
+    sync_interval = 20   # 신경망 동기화 주기(20번째 에피소드마다 동기화)
+    env = gym.make('CartPole-v0', render_mode='rgb_array')
+    agent = DQNAgent()
+    reward_history = []  # 에피소드별 보상 기록
+
+    for episode in range(episodes):
+        state = env.reset()[0]
+        done = False
+        total_reward = 0
+
+        while not done:
+            action = agent.get_action(state)
+            next_state, reward, terminated, truncated, info = env.step(action)
+            done = terminated | truncated
+
+            agent.update(state, action, reward, next_state, done)
+            state = next_state
+            total_reward += reward
+        
+        if episode % sync_interval == 0:
+            agent.sync_qnet()
+        
+        reward_history.append(total_reward)
+        if episode % 10 == 0:
+            print("episode : {}, total reward : {}".format(episode, total_reward))
+    
+    # [그림 8-8] 「카트 폴」에서 에피소드별 보상 총합의 추이
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    plt.plot(range(len(reward_history)), reward_history)
+    plt.show()
+
+    # 학습이 끝난 에이전트에 탐욕 행동을 선택하도록 하여 플레이
+    agent.epsilon = 0  # 탐욕 정책(무작위로 행동할 확률 ε을 0로 설정)
+    state = env.reset()[0]
+    done = False
+    total_reward = 0
+
+    while not done:
+        action = agent.get_action(state)
+        next_state, reward, terminated, truncated, info = env.step(action)
+        done = terminated | truncated
+        state = next_state
+        total_reward += reward
+        env.render()
+    print('Total Reward:', total_reward)

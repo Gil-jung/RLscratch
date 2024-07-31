@@ -1,6 +1,7 @@
 from collections import deque
 import random
 import numpy as np
+import torch
 import gym
 
 
@@ -19,11 +20,11 @@ class ReplayBuffer:
     def get_batch(self):
         data = random.sample(self.buffer, self.batch_size)
 
-        state = np.stack([x[0] for x in data])
-        action = np.array([x[1] for x in data])
-        reward = np.array([x[2] for x in data])
-        next_state = np.stack([x[3] for x in data])
-        done = np.array([x[4] for x in data]).astype(np.int32)
+        state = torch.from_numpy(np.stack([x[0] for x in data]))
+        action = torch.from_numpy(np.array([x[1] for x in data]))
+        reward = torch.from_numpy(np.array([x[2] for x in data]).astype(np.float32))
+        next_state = torch.from_numpy(np.stack([x[3] for x in data]))
+        done = torch.from_numpy(np.array([x[4] for x in data]).astype(np.int32))
         return state, action, reward, next_state, done
 
 
