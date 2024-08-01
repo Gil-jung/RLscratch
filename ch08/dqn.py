@@ -58,8 +58,11 @@ class DQNAgent:  # 에이전트 클래스
         qs = self.qnet(state)
         q = qs[np.arange(self.batch_size), action]
 
-        next_qs = self.qnet_target(next_state)
-        next_q = next_qs.max(axis=1)[0]
+        next_qs_target = self.qnet_target(next_state)
+        next_qs = self.qnet(next_state)
+        actions = next_qs.argmax(axis=1)[0]
+        next_q = next_qs_target[:, actions]  # Double DQN
+        # next_q = next_qs.max(axis=1)[0]
 
         next_q.detach()
         target = reward + (1 - done) * self.gamma * next_q
